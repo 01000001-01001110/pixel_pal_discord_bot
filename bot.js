@@ -1,5 +1,7 @@
 //Bot backup that works and has queue status and image description and buttons
 
+//Bot backup that works and has queue status and image description and buttons
+
 import FormData from 'form-data';
 import { 
   Client,
@@ -59,6 +61,7 @@ client.on('interactionCreate', async interaction => {
 
     await interaction.deferReply();
 
+
     // First, check the job queue status
     const queueStatus = await checkJobQueue();
     
@@ -83,7 +86,7 @@ client.on('interactionCreate', async interaction => {
         ],
         performance_selection: "Speed",
         aspect_ratios_selection: "1344*768",
-        image_number: numberOfImages ? numberOfImages : 1, // Default to 1 if no input
+        image_number: 4,
         image_seed: -1,
         sharpness: 2,
         guidance_scale: 4,
@@ -162,76 +165,72 @@ client.on('interactionCreate', async interaction => {
 
             if (jobStatus === 'Finished') {
               clearInterval(statusInterval);
-
+            
               // Handle multiple images
               const images = statusResponse.data.job_result;
               let files = []; // Array to store file attachments
-
+            
               for (const image of images) {
                 // Append each image to the files array
                 files.push({ attachment: image.url });
               }
-
+            
               // Create an array to hold the rows of buttons
               const rows = [];
-
-              // Create the first row of buttons
+            
+              // First row with U1-U4 and Refresh
               const row1 = new ActionRowBuilder()
-              .addComponents(
-                new ButtonBuilder()
-                  .setCustomId('U1')
-                  .setLabel('U1')
-                  .setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder()
-                  .setCustomId('U2')
-                  .setLabel('U2')
-                  .setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder()
-                  .setCustomId('U3')
-                  .setLabel('U3')
-                  .setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder()
-                  .setCustomId('U4')
-                  .setLabel('U4')
-                  .setStyle(ButtonStyle.Secondary),
-              );
+                .addComponents(
+                  new ButtonBuilder()
+                    .setCustomId('U1')
+                    .setLabel('U1')
+                    .setStyle(ButtonStyle.Secondary),
+                  new ButtonBuilder()
+                    .setCustomId('U2')
+                    .setLabel('U2')
+                    .setStyle(ButtonStyle.Secondary),
+                  new ButtonBuilder()
+                    .setCustomId('U3')
+                    .setLabel('U3')
+                    .setStyle(ButtonStyle.Secondary),
+                  new ButtonBuilder()
+                    .setCustomId('U4')
+                    .setLabel('U4')
+                    .setStyle(ButtonStyle.Secondary),
+                  new ButtonBuilder()
+                    .setCustomId('refresh')
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji('🔄'),
+                );
               rows.push(row1);
-
-              // Create the second row of buttons
+            
+              // Second row with V1-V4
               const row2 = new ActionRowBuilder()
-              .addComponents(
-                new ButtonBuilder()
-                  .setCustomId('V1')
-                  .setLabel('V1')
-                  .setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder()
-                  .setCustomId('V2')
-                  .setLabel('V2')
-                  .setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder()
-                  .setCustomId('V3')
-                  .setLabel('V3')
-                  .setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder()
-                  .setCustomId('V4')
-                  .setLabel('V4')
-                  .setStyle(ButtonStyle.Secondary),
-              );
+                .addComponents(
+                  new ButtonBuilder()
+                    .setCustomId('V1')
+                    .setLabel('V1')
+                    .setStyle(ButtonStyle.Secondary),
+                  new ButtonBuilder()
+                    .setCustomId('V2')
+                    .setLabel('V2')
+                    .setStyle(ButtonStyle.Secondary),
+                  new ButtonBuilder()
+                    .setCustomId('V3')
+                    .setLabel('V3')
+                    .setStyle(ButtonStyle.Secondary),
+                  new ButtonBuilder()
+                    .setCustomId('V4')
+                    .setLabel('V4')
+                    .setStyle(ButtonStyle.Secondary)
+                );
               rows.push(row2);
-
-              // Add an additional row for the single refresh button
-              const row3 = new ActionRowBuilder()
-              .addComponents(
-                new ButtonBuilder()
-                  .setCustomId('refresh')
-                  .setLabel('Refresh')
-                  .setStyle(ButtonStyle.Primary)
-                  .setEmoji('🔄')
-              );
-              rows.push(row3);
-
-               // Send the final images as attachments with the buttons
-              const replyContent = `**${userInput}** - Generated Images:`;
+            
+              // Send the final images as attachments with the buttons
+              const replyContent = `**${userInput}** - Generated Images:
+               **U1-U4**: Upscale the image to 2x its original size.
+               **V1-V4**: Apply a slight variation to the image.
+               **🔄**: Refresh to see new variations.`;
               await interaction.editReply({ content: replyContent, files: files, components: rows });
 
             } else if (jobStatus === 'Failed') {
