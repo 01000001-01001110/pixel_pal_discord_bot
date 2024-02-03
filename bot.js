@@ -8,7 +8,7 @@ import {
   getImageUrlByIndex 
 } from './generateImage.js'; 
 import describeCommand from './describeCommand.js'; 
-import upscaleImage from './upscaleCommand.js';
+import { upscaleImage } from './upscaleCommand.js';
 import axios from 'axios';
 import dotenv from 'dotenv';
 
@@ -35,47 +35,56 @@ client.on('ready', () => {
 
 client.on('interactionCreate', async interaction => {
   if (interaction.isButton()) {
-    let imageIndex;
-    switch (interaction.customId) {
-      case 'U1':
-        imageIndex = 0;
-        break;
-      case 'U2':
-        imageIndex = 1;
-        break;
-      case 'U3':
-        imageIndex = 2;
-        break;
-      case 'U4':
-        imageIndex = 3;
-        break;
-      case 'V1':
-      case 'V2':
-      case 'V3':
-      case 'V4':
-      case 'refresh':
-        // Log for debugging; replace with actual handling logic
-        console.log(`${interaction.customId} button clicked`);
-        await interaction.followUp({ content: `${interaction.customId} button action is being processed.`, ephemeral: true });
-        break;
-      default:
-        await interaction.followUp('Unknown button clicked.');
-    }
+      const interactionId = interaction.message.interaction.id; // Get the ID of the original interaction
+      let imageUrl;
 
-    if (['U1', 'U2', 'U3', 'U4'].includes(interaction.customId)) {
-      await interaction.deferReply({ ephemeral: true });
-      await upscaleImage(interaction, imageIndex);
-    }
+      if (['U1', 'U2', 'U3', 'U4'].includes(interaction.customId)) {
+          const imageIndex = parseInt(interaction.customId[1]) - 1;
+          imageUrl = getImageUrlByIndex(interactionId, imageIndex);
 
+          if (imageUrl) {
+              // Directly call upscaleImage with the imageUrl
+              // Note: Interaction reply or defer is handled within upscaleImage
+              upscaleImage(interaction, imageUrl);
+          } else {
+              // Reply directly if image URL is not found, no need to defer in this case
+              interaction.reply({ content: "Image not found.", ephemeral: true });
+          }
+      } else if (['V1', 'V2', 'V3', 'V4', 'refresh'].includes(interaction.customId)) {
+          // Handle other buttons like variations or refresh
+          console.log(`${interaction.customId} button clicked`);
+          interaction.followUp({ content: `${interaction.customId} button action is being processed.`, ephemeral: true });
+      } else {
+          // Handle unknown button clicks
+          interaction.reply({ content: 'Unknown button clicked.', ephemeral: true });
+      }
   } else if (interaction.isChatInputCommand()) {
-    if (interaction.commandName === 'generate') {
-      await generateCommand(interaction, checkJobQueue);
-    } else if (interaction.commandName === 'describe') {
-      await describeCommand(interaction);
-    }
-    // Add else if blocks for other commands as needed
-  }
-});
+    if (!interaction.deferred && !interaction.replied) {
+      if (interaction.commandName === 'generate') {
+          await generateCommand(interaction, checkJobQueue);
+      } else if (interaction.commandName === 'describe') {
+          await describeCommand(interaction);
+      } else if (interaction.commandName === 'upscale') {
+          const imageAttachment = interaction.options.getAttachment('image'); // For uploaded image
+          const imageUrl = interaction.options.getString('image_url'); // For image URL
 
+          // Validate the input before proceeding
+          if (imageAttachment && imageUrl) {
+              await interaction.reply({ content: 'Please provide either an image attachment or a URL, but not both.', ephemeral: true });
+              return;
+          } else if (!imageAttachment && !imageUrl) {
+              await interaction.reply({ content: 'Please provide an image attachment or a URL.', ephemeral: true });
+              return;
+          }
+
+          // Determine the source of the image to upscale
+          const imageSource = imageAttachment ? imageAttachment.url : imageUrl;
+          await interaction.deferReply({ ephemeral: true });
+          await upscaleImage(interaction, imageSource);
+      }
+      // Add else if blocks for other commands as needed
+  }
+}
+});
 // Login the bot
 client.login(process.env.DISCORD_TOKEN);

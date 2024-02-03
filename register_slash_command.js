@@ -15,9 +15,9 @@ const commands = [
         type: 3, // STRING type for input
         name: 'input',
         description: 'The input to generate an image from',
-        required: true
-      }
-    ]
+        required: true,
+      },
+    ],
   },
   {
     name: 'describe',
@@ -27,16 +27,34 @@ const commands = [
         type: 11, // ATTACHMENT for image upload
         name: 'image',
         description: 'Upload an image to describe',
-        required: false
+        required: false,
       },
       {
         type: 3, // STRING for image URL
         name: 'image_url',
         description: 'Enter an image URL to describe',
-        required: false
-      }
-    ]
-  }
+        required: false,
+      },
+    ],
+  },
+  {
+    name: 'upscale',
+    description: 'Upscales an uploaded image or an image from a URL',
+    options: [
+      {
+        type: 11, // ATTACHMENT for image upload
+        name: 'image',
+        description: 'Upload an image to upscale',
+        required: false,
+      },
+      {
+        type: 3, // STRING for image URL
+        name: 'image_url',
+        description: 'Enter an image URL to upscale',
+        required: false,
+      },
+    ],
+  },
 ];
 
 const rest = new REST({ version: '10' }).setToken(token);
@@ -47,7 +65,7 @@ const rest = new REST({ version: '10' }).setToken(token);
 
     await rest.put(
       Routes.applicationCommands(clientId),
-      { body: commands }
+      { body: commands },
     );
 
     console.log('Successfully reloaded application (/) commands.');

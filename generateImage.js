@@ -135,7 +135,7 @@ const generateCommand = async (interaction, checkJobQueue) => {
         }
       };
 
-      const statusCheckInterval = setInterval(checkStatus, 10000); // Adjust interval as needed
+      const statusCheckInterval = setInterval(checkStatus, 4500); // Adjust interval as needed
     } else {
       await interaction.editReply('Failed to start image generation. No job ID returned.');
     }
@@ -153,7 +153,7 @@ function createButtonRows() {
       new ButtonBuilder().setCustomId('U2').setLabel('U2').setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId('U3').setLabel('U3').setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId('U4').setLabel('U4').setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder().setCustomId('refresh').setLabel('🔄 Refresh').setStyle(ButtonStyle.Primary)
+      new ButtonBuilder().setCustomId('refresh').setLabel('🔄').setStyle(ButtonStyle.Primary)
     );
 
   // Second row with buttons for applying variations (V1-V4)
