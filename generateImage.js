@@ -1,6 +1,6 @@
 // generateCommand.js
 import axios from 'axios';
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } from 'discord.js';
 
 global.imageUrls = global.imageUrls || {};
 
@@ -8,23 +8,16 @@ function getImageUrlByIndex(interactionId, index) {
   return global.imageUrls[interactionId] ? global.imageUrls[interactionId][index] : null;
 }
 
-// Assuming checkJobQueue is defined elsewhere and passed as a parameter
 const generateCommand = async (interaction, checkJobQueue) => {
   const userInput = interaction.options.getString('input');
-  // Default to 1 if not provided; adjust according to your actual command options
-  const numberOfImages = interaction.options.getInteger('number_of_images') || 1;
-
   await interaction.deferReply();
 
-  // Check the job queue status
   const queueStatus = await checkJobQueue();
-  
   if (queueStatus) {
     await interaction.followUp(`Current queue: ${queueStatus.running_size} running jobs. Processing might take some time.`);
   }
 
   try {
-    // Adjust API request to include the number of images
     const startResponse = await axios.post('http://127.0.0.1:8888/v1/generation/text-to-image', {
       prompt: userInput,
       negative_prompt: "(worst quality, greyscale), watermark, username, signature, text, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, jpeg artifacts, bad feet, extra fingers, mutated hands, poorly drawn hands, bad proportions, extra limbs, disfigured, bad anatomy, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, mutated hands, fused fingers, too many fingers, long neck,ng_deepnegative_v1_75t, flat chest, tiny tits, cross eyes, cartoon, 3d, anime, negative_hand-neg, oversaturated, blurry, art, painting, rendering, drawing, sketch, long neck, low quality, worst quality, monochrome, watermark, tan lines, necklace, fingers,",
@@ -106,111 +99,43 @@ const generateCommand = async (interaction, checkJobQueue) => {
         }
       });
 
-    const jobId = startResponse.data.job_id;
+      const jobId = startResponse.data.job_id;
     if (jobId) {
       await interaction.editReply(`Image generation started. Job ID: ${jobId}. Please wait...`);
 
       // Function to periodically check job status
       const checkStatus = async () => {
-        try {
-          const statusResponse = await axios.get(`http://127.0.0.1:8888/v1/generation/query-job?job_id=${jobId}`);
-          const jobStatus = statusResponse.data.job_status;
+        const statusResponse = await axios.get(`http://127.0.0.1:8888/v1/generation/query-job?job_id=${jobId}&require_step_preview=true`);
+        const { job_stage, job_progress, job_result, job_step_preview } = statusResponse.data;
 
-          if (jobStatus === 'Finished') {
-            clearInterval(statusInterval);
-          
-            // Handle multiple images
-            const images = statusResponse.data.job_result;
-            let files = []; // Array to store file attachments
-          
-            for (const image of images) {
-              // Append each image to the files array
-              files.push({ attachment: image.url });
-            }
-          
-            // Create an array to hold the rows of buttons
-            const rows = [];
-          
-            // First row with U1-U4 and Refresh
-            const row1 = new ActionRowBuilder()
-              .addComponents(
-                new ButtonBuilder()
-                  .setCustomId('U1')
-                  .setLabel('U1')
-                  .setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder()
-                  .setCustomId('U2')
-                  .setLabel('U2')
-                  .setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder()
-                  .setCustomId('U3')
-                  .setLabel('U3')
-                  .setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder()
-                  .setCustomId('U4')
-                  .setLabel('U4')
-                  .setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder()
-                  .setCustomId('refresh')
-                  .setStyle(ButtonStyle.Primary)
-                  .setEmoji('🔄'),
-              );
-            rows.push(row1);
-          
-            // Second row with V1-V4
-            const row2 = new ActionRowBuilder()
-              .addComponents(
-                new ButtonBuilder()
-                  .setCustomId('V1')
-                  .setLabel('V1')
-                  .setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder()
-                  .setCustomId('V2')
-                  .setLabel('V2')
-                  .setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder()
-                  .setCustomId('V3')
-                  .setLabel('V3')
-                  .setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder()
-                  .setCustomId('V4')
-                  .setLabel('V4')
-                  .setStyle(ButtonStyle.Secondary)
-              );
-            rows.push(row2);
+        if (job_stage !== 'SUCCESS' && job_step_preview) {
+          // Update with real-time preview if available
+          const previewBuffer = Buffer.from(job_step_preview, 'base64');
+          await interaction.editReply({ 
+            content: `**Job ID:** ${jobId}\n**Progress:** ${job_progress}%\nPreview:`, 
+            files: [new AttachmentBuilder(previewBuffer, { name: 'preview.png' })] 
+          });
+        } else if (job_stage === 'SUCCESS') {
+          clearInterval(statusCheckInterval); // Stop checking the job status
+          // Final update with the result
+          let files = job_result.map(image => ({ attachment: image.url }));
+          let components = createButtonRows(); // Assuming you have a function to create your button rows
 
-            const generatedImages = []; // Assume this array holds the generated image URLs
-            global.imageUrls[interaction.id] = generatedImages;
+          await interaction.editReply({ 
+            content: `Image generation complete.`, 
+            files: files, 
+            components: components 
+          });
 
-            // Send the final images as attachments with the buttons
-            const replyContent = `**${userInput}** - Generated Images:
-             **U1-U4**: Upscale the image to 2x its original size.
-             **V1-V4**: Apply a slight variation to the image.
-             **🔄**: Refresh to see new variations.`;
-            await interaction.editReply({ content: replyContent, files: files, components: rows });
-
-          } else if (jobStatus === 'Failed') {
-            clearInterval(statusInterval);
-            await interaction.editReply('Image generation failed.');
-          } else if (!jobStatus || jobStatus === 'null') {
-            // Fetch queue information if job status is not available
-            const queueInfo = await checkJobQueue();
-            if (queueInfo) {
-              await interaction.editReply(`Queue information: ${queueInfo.running_size} running jobs. Your job is in the queue. Please wait...`);
-            } else {
-              await interaction.editReply(`Waiting for job status...`);
-            }
-          } else {
-            await interaction.editReply(`Current status: ${jobStatus}. Please wait...`);
-          }
-        } catch (error) {
-          console.error('Status check error:', error);
-          clearInterval(statusInterval);
-          await interaction.editReply('Failed to check image generation status.');
+          // Update global.imageUrls for interaction with the final images
+          global.imageUrls[interaction.id] = job_result.map(image => image.url);
+        } else if (job_stage === 'ERROR') {
+          clearInterval(statusCheckInterval); // Stop checking the job status
+          await interaction.editReply(`Image generation failed.`);
         }
       };
 
-      const statusInterval = setInterval(checkStatus, 10000); // Check every 10 seconds
+      const statusCheckInterval = setInterval(checkStatus, 10000); // Adjust interval as needed
     } else {
       await interaction.editReply('Failed to start image generation. No job ID returned.');
     }
@@ -219,5 +144,31 @@ const generateCommand = async (interaction, checkJobQueue) => {
     await interaction.editReply('Failed to start image generation.');
   }
 };
+
+function createButtonRows() {
+  // First row with buttons for upscaling (U1-U4) and refreshing the images
+  const row1 = new ActionRowBuilder()
+    .addComponents(
+      new ButtonBuilder().setCustomId('U1').setLabel('U1').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId('U2').setLabel('U2').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId('U3').setLabel('U3').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId('U4').setLabel('U4').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId('refresh').setLabel('🔄 Refresh').setStyle(ButtonStyle.Primary)
+    );
+
+  // Second row with buttons for applying variations (V1-V4)
+  const row2 = new ActionRowBuilder()
+    .addComponents(
+      new ButtonBuilder().setCustomId('V1').setLabel('V1').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId('V2').setLabel('V2').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId('V3').setLabel('V3').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId('V4').setLabel('V4').setStyle(ButtonStyle.Secondary)
+    );
+
+  // Additional rows can be added here if needed for more functionalities
+  
+  return [row1, row2]; // Return an array of action rows
+}
+
 
 export { getImageUrlByIndex, generateCommand };
