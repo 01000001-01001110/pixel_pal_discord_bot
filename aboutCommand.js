@@ -10,6 +10,7 @@ const aboutCommand = async (interaction) => {
         .setTitle(`Hello, ${userName}, digital artist!`)
         .setDescription(`I am Pixel Pal, a Discord bot designed to enhance your digital art experience. Here's what I can do for you:`)
         .setThumbnail(iconUrl) // Sets the thumbnail to the embed
+        .setAuthor({ name: "iNet", iconURL: iconUrl }) // Display name as "iNet"
         .addFields(
             { name: 'Generate', value: 'Generate images from text prompts.' },
             { name: 'Describe', value: 'Describe the content of images.' },
@@ -28,10 +29,13 @@ const aboutCommand = async (interaction) => {
 - **Modularization**: Improved code structure for easy maintenance.
             ` }
         )
-        .setFooter({ text: 'Here to make your digital art creation process smoother and more fun!' });
+        .setFooter({ text: `Created by Alan ( iNet ) Newingham | Here to make your digital art creation process smoother and more fun!` });
 
+        // Mentioning the user in the message content
+    const messageContent = `Hello, <@${interaction.user.id}>! Here's some information about what I can do. If you need to get in touch with my creator, you can reach them through discord <@393205606397509632>.`;
     // Use ephemeral: true to make the reply only visible to the user
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ content: messageContent, embeds: [embed], ephemeral: true });
 };
 
 export { aboutCommand };
+
