@@ -13,6 +13,7 @@ import axios from 'axios';
 import dotenv from 'dotenv';
 import { varyImage } from './varyImage.js'; // Add this import
 import { regenerateImages } from './regenerateImages.js';
+import { aboutCommand } from './aboutCommand.js';
 
 dotenv.config();
 
@@ -111,7 +112,7 @@ client.on('interactionCreate', async interaction => {
       } else {
           await interaction.reply({ content: "Unable to refresh. Original prompt not found.", ephemeral: true });
       }
-  }
+  } 
   } else if (interaction.isChatInputCommand()) {
     if (!interaction.deferred && !interaction.replied) {
       if (interaction.commandName === 'generate') {
@@ -150,7 +151,9 @@ client.on('interactionCreate', async interaction => {
     
         // Call varyImage with the validated image source and variation type
         await varyImage(interaction, imageSource, variationType);
-    }
+      } else if (interaction.commandName === 'about') {
+      await aboutCommand(interaction);
+  }
       // Add else if blocks for other commands as needed
   }
 }

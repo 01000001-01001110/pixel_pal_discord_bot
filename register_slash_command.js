@@ -88,6 +88,10 @@ const commands = [
         required: false,
       },
     ],
+  },
+  {
+    "name": "about",
+    "description": "Displays information about the bot and its features."
   }
 ];
 const rest = new REST({ version: '10' }).setToken(token);
