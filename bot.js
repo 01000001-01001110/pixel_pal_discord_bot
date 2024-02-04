@@ -11,10 +11,51 @@ import describeCommand from './describeCommand.js';
 import { upscaleImage } from './upscaleCommand.js';
 import axios from 'axios';
 import dotenv from 'dotenv';
+import { varyImage } from './varyImage.js'; // Add this import
+import { regenerateImages } from './regenerateImages.js';
 
 dotenv.config();
 
+global.lastPrompts = {};
+
+global.prompts = {};
+
 global.imageUrls = {};
+
+// Example function to re-initiate the generation process for the "refresh" action
+async function refreshGenerationProcess(interaction, promptDetails) {
+  // Extract details from promptDetails object
+  const { prompt, styleSelections, aspectRatio, imageNumber, sharpness, guidanceScale, baseModelName } = promptDetails;
+
+  // Assuming you have a function to initiate image generation that accepts these parameters directly
+  try {
+    const response = await initiateImageGeneration({
+      prompt: prompt,
+      styleSelections: styleSelections,
+      aspectRatio: aspectRatio,
+      imageNumber: imageNumber,
+      sharpness: sharpness,
+      guidanceScale: guidanceScale,
+      baseModelName: baseModelName
+      // Add other parameters as needed
+    });
+
+    // Process response and send results to the user
+    // This might include sending the generated images, updating the interaction, etc.
+    // Adjust according to how you handle successful generation and sending results back to the user
+    if (response.success) {
+      // Example of sending a success message with generated images
+      const files = response.images.map(url => new AttachmentBuilder(url, { name: 'generated-image.png' }));
+      await interaction.editReply({ content: 'Refreshed image generation complete.', files: files });
+    } else {
+      // Handle generation failure
+      await interaction.editReply('Failed to refresh image generation.');
+    }
+  } catch (error) {
+    console.error('Error in refreshing image generation:', error);
+    await interaction.editReply('Error occurred during refreshed image generation.');
+  }
+}
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
@@ -35,29 +76,42 @@ client.on('ready', () => {
 
 client.on('interactionCreate', async interaction => {
   if (interaction.isButton()) {
-      const interactionId = interaction.message.interaction.id; // Get the ID of the original interaction
-      let imageUrl;
+    const interactionId = interaction.message.interaction.id; // Get the ID of the original interaction
+    let imageUrl;
 
-      if (['U1', 'U2', 'U3', 'U4'].includes(interaction.customId)) {
-          const imageIndex = parseInt(interaction.customId[1]) - 1;
-          imageUrl = getImageUrlByIndex(interactionId, imageIndex);
+    if (['U1', 'U2', 'U3', 'U4'].includes(interaction.customId)) {
+      const imageIndex = parseInt(interaction.customId[1]) - 1;
+      imageUrl = getImageUrlByIndex(interactionId, imageIndex);
 
-          if (imageUrl) {
-              // Directly call upscaleImage with the imageUrl
-              // Note: Interaction reply or defer is handled within upscaleImage
-              upscaleImage(interaction, imageUrl);
-          } else {
-              // Reply directly if image URL is not found, no need to defer in this case
-              interaction.reply({ content: "Image not found.", ephemeral: true });
-          }
-      } else if (['V1', 'V2', 'V3', 'V4', 'refresh'].includes(interaction.customId)) {
-          // Handle other buttons like variations or refresh
-          console.log(`${interaction.customId} button clicked`);
-          interaction.followUp({ content: `${interaction.customId} button action is being processed.`, ephemeral: true });
+      if (imageUrl) {
+        // Call upscaleImage function for U1-U4 buttons
+        await interaction.deferReply({ ephemeral: true });
+        await upscaleImage(interaction, imageUrl);
       } else {
-          // Handle unknown button clicks
-          interaction.reply({ content: 'Unknown button clicked.', ephemeral: true });
+        interaction.reply({ content: "Image not found.", ephemeral: true });
       }
+    } else if (['V1', 'V2', 'V3', 'V4'].includes(interaction.customId)) {
+      // Apply a "slight" variation for V1-V4 buttons
+      const imageIndex = parseInt(interaction.customId[1]) - 1;
+      imageUrl = getImageUrlByIndex(interactionId, imageIndex);
+
+      if (imageUrl) {
+        await interaction.deferReply({ ephemeral: true });
+        await varyImage(interaction, imageUrl, "slight"); // Use "slight" variation
+      } else {
+        interaction.reply({ content: "Image not found.", ephemeral: true });
+      }
+    } if (interaction.customId === 'refresh') {
+      const originalInteractionId = interaction.message.interaction.id;
+      const prompt = global.prompts[originalInteractionId];
+  
+      if (prompt) {
+          await interaction.deferReply({ ephemeral: true });
+          await regenerateImages(interaction, prompt);
+      } else {
+          await interaction.reply({ content: "Unable to refresh. Original prompt not found.", ephemeral: true });
+      }
+  }
   } else if (interaction.isChatInputCommand()) {
     if (!interaction.deferred && !interaction.replied) {
       if (interaction.commandName === 'generate') {
@@ -81,7 +135,22 @@ client.on('interactionCreate', async interaction => {
           const imageSource = imageAttachment ? imageAttachment.url : imageUrl;
           await interaction.deferReply({ ephemeral: true });
           await upscaleImage(interaction, imageSource);
-      }
+      } else if (interaction.commandName === 'vary') {
+        const imageAttachment = interaction.options.getAttachment('image');
+        const imageUrl = interaction.options.getString('image_url');
+        const variationType = interaction.options.getString('variation_type'); // Assume you've added a string option to command
+    
+        // Validate input
+        if (!imageAttachment && !imageUrl) {
+            await interaction.reply({ content: 'Please provide an image.', ephemeral: true });
+            return;
+        }
+    
+        const imageSource = imageAttachment ? imageAttachment.url : imageUrl;
+    
+        // Call varyImage with the validated image source and variation type
+        await varyImage(interaction, imageSource, variationType);
+    }
       // Add else if blocks for other commands as needed
   }
 }

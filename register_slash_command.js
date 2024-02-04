@@ -55,8 +55,41 @@ const commands = [
       },
     ],
   },
+  {
+    name: 'vary',
+    description: 'Applies a variation to an uploaded image or an image from a URL',
+    options: [
+      {
+        type: 3, // STRING for selecting the variation type
+        name: 'variation_type',
+        description: 'Choose the type of variation: slight or strong',
+        required: true,
+        choices: [
+          {
+            name: 'slight',
+            value: 'slight',
+          },
+          {
+            name: 'strong',
+            value: 'strong',
+          },
+        ],
+      },
+      {
+        type: 11, // ATTACHMENT for image upload
+        name: 'image',
+        description: 'Upload an image to vary',
+        required: false,
+      },
+      {
+        type: 3, // STRING for image URL
+        name: 'image_url',
+        description: 'Enter an image URL to vary',
+        required: false,
+      },
+    ],
+  }
 ];
-
 const rest = new REST({ version: '10' }).setToken(token);
 
 (async () => {

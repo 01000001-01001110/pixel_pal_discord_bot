@@ -4,6 +4,8 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } from 
 
 global.imageUrls = global.imageUrls || {};
 
+
+
 function getImageUrlByIndex(interactionId, index) {
   return global.imageUrls[interactionId] ? global.imageUrls[interactionId][index] : null;
 }
@@ -116,6 +118,8 @@ const generateCommand = async (interaction, checkJobQueue) => {
             files: [new AttachmentBuilder(previewBuffer, { name: 'preview.png' })] 
           });
         } else if (job_stage === 'SUCCESS') {
+          // Inside the generateCommand function, after generating images
+            global.prompts[interaction.id] = userInput;
           clearInterval(statusCheckInterval); // Stop checking the job status
           // Final update with the result
           let files = job_result.map(image => ({ attachment: image.url }));
@@ -153,7 +157,7 @@ function createButtonRows() {
       new ButtonBuilder().setCustomId('U2').setLabel('U2').setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId('U3').setLabel('U3').setStyle(ButtonStyle.Secondary),
       new ButtonBuilder().setCustomId('U4').setLabel('U4').setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder().setCustomId('refresh').setLabel('🔄').setStyle(ButtonStyle.Primary)
+      new ButtonBuilder().setCustomId('refresh').setLabel('🔄 Refresh').setStyle(ButtonStyle.Primary)
     );
 
   // Second row with buttons for applying variations (V1-V4)
@@ -171,4 +175,4 @@ function createButtonRows() {
 }
 
 
-export { getImageUrlByIndex, generateCommand };
+export { getImageUrlByIndex, generateCommand, createButtonRows };
