@@ -39,20 +39,20 @@ const generateCommand = async (interaction, checkJobQueue) => {
         sharpness: 2,
         guidance_scale: 4,
         base_model_name: "juggernautXL_v8Rundiffusion.safetensors",
-        refiner_model_name: "None",
-        refiner_switch: 0.5,
+        refiner_model_name: "",
+        refiner_switch: 0.2,
         loras: [
         {
             model_name: "sd_xl_offset_example-lora_1.0.safetensors",
             weight: 0.1
         },
         {
-          model_name: "add_detail.safetensors",
+          model_name: "",
           weight: 1
         },
         {
-          model_name: "godpussy1_v4.safetensors",
-          weight: 0.8
+          model_name: "",
+          weight: 0
         }
 
         ],

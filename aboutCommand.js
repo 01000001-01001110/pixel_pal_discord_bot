@@ -12,12 +12,12 @@ const aboutCommand = async (interaction) => {
         .setThumbnail(iconUrl) // Sets the thumbnail to the embed
         .setAuthor({ name: "iNet", iconURL: iconUrl }) // Display name as "iNet"
         .addFields(
-            { name: 'Generate', value: 'Generate images from text prompts.' },
-            { name: 'Describe', value: 'Describe the content of images.' },
-            { name: 'Upscale', value: 'Enhance the resolution of images.' },
-            { name: 'Vary', value: 'Apply variations to images for slight or strong effects.' },
+            { name: '/Generate', value: 'Generate images from text prompts.' },
+            { name: '/Describe', value: 'Describe the content of images.' },
+            { name: '/Upscale', value: 'Enhance the resolution of images.' },
+            { name: '/Vary', value: 'Apply variations to images for slight or strong effects.' },
             { name: 'Refresh', value: 'Regenerate images with the same prompts for new perspectives.' },
-            { name: 'About', value: 'Displays information about me and what I can do.' },
+            { name: '/About', value: 'Displays information about me and what I can do.' },
             { name: 'Changelog', value: `
 - **Initial Setup**: Foundation and Discord API integration.
 - **Upscale Feature**: Image resolution enhancement.
